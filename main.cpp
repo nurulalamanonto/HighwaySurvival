@@ -19,19 +19,19 @@ int main() {
     srand(time(0));
 
     // ---- Load textures ----
-    Texture2D playerCar = LoadTexture("mycar.png");
+    Texture2D playerCar = LoadTexture("Graphics/mycar.png");
     Texture2D enemyCars[3];
-    enemyCars[0] = LoadTexture("pickup.png");
-    enemyCars[1] = LoadTexture("bus.png");
-    enemyCars[2] = LoadTexture("police.png");
+    enemyCars[0] = LoadTexture("Graphics/pickup.png");
+    enemyCars[1] = LoadTexture("Graphics/bus.png");
+    enemyCars[2] = LoadTexture("Graphics/police.png");
 
     // ---- Separate road and different roadside textures ----
-    Texture2D roadTex = LoadTexture("roadtex.jpg");         // middle road
-    Texture2D leftSideTex = LoadTexture("left.jpg");       // left side
-    Texture2D rightSideTex = LoadTexture("right.jpg");     // right side
+    Texture2D roadTex = LoadTexture("Graphics/roadtex.jpg");         // middle road
+    Texture2D leftSideTex = LoadTexture("Graphics/left.jpg");       // left side
+    Texture2D rightSideTex = LoadTexture("Graphics/right.jpg");     // right side
 
     // ---- Start menu background image ----
-    Texture2D startBg = LoadTexture("start.png");       // Add your start menu image here
+    Texture2D startBg = LoadTexture("Graphics/start.png");       // Add your start menu image here
 
     // Game variables
     float playerX = screenWidth / 2 - carSize / 2;
