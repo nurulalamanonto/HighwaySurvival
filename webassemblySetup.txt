@@ -1,0 +1,30 @@
+✅ Steps in cmd.exe
+
+Open Command Prompt:
+
+Press Win + R, type cmd, press Enter.
+
+Go to your emsdk folder:
+
+cd C:\Users\User\OneDrive\Documents\emsdk
+
+
+Activate Emscripten:
+
+emsdk_env.bat
+
+
+You should see:
+
+Setting up EMSDK environment...
+Adding directories to PATH...
+
+
+Go to your project folder:
+
+cd C:\Users\User\OneDrive\Documents\GameProject\HighwaySurvival
+
+
+Compile your game:
+
+emcc -o HighwaySurvival.html main.cpp -Wall -std=c++14 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I. -I C:/raylib/raylib/src -I C:/raylib/raylib/src/external -L. -L C:/raylib/raylib/src -s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 -s FORCE_FILESYSTEM=1 --preload-file Graphics --preload-file Sounds --shell-file C:/raylib/raylib/src/shell.html C:/raylib/raylib/src/web/libraylib.a -DPLATFORM_WEB -s "EXPORTED_FUNCTIONS=['_free','_malloc','_main']" -s EXPORTED_RUNTIME_METHODS=ccall

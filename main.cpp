@@ -4,6 +4,19 @@
 #include <ctime>
 #include <algorithm>
 
+// 🟡 Helper function to draw text with border (outline)
+void DrawTextWithBorder(const char* text, int posX, int posY, int fontSize, Color textColor, Color borderColor) {
+    DrawText(text, posX - 1, posY, fontSize, borderColor);
+    DrawText(text, posX + 1, posY, fontSize, borderColor);
+    DrawText(text, posX, posY - 1, fontSize, borderColor);
+    DrawText(text, posX, posY + 1, fontSize, borderColor);
+    DrawText(text, posX - 1, posY - 1, fontSize, borderColor);
+    DrawText(text, posX + 1, posY - 1, fontSize, borderColor);
+    DrawText(text, posX - 1, posY + 1, fontSize, borderColor);
+    DrawText(text, posX + 1, posY + 1, fontSize, borderColor);
+    DrawText(text, posX, posY, fontSize, textColor);
+}
+
 struct Car {
     float x, y;
     int type; // enemy car type
@@ -13,33 +26,44 @@ int main() {
     const int screenWidth = 400;
     const int screenHeight = 600;
     const int carSize = 40;
-    InitWindow(screenWidth, screenHeight, "Subway Survival - Stay sharp, stay alive.");
+    InitWindow(screenWidth, screenHeight, "Highway Survival - Stay sharp, stay alive.");
     SetTargetFPS(60);
 
+    InitAudioDevice();
     srand(time(0));
 
-    // ---- Load textures ----
     Texture2D playerCar = LoadTexture("Graphics/mycar.png");
-    Texture2D enemyCars[3];
+    Texture2D enemyCars[4];   // 🔹 now 4 enemy types
     enemyCars[0] = LoadTexture("Graphics/pickup.png");
     enemyCars[1] = LoadTexture("Graphics/bus.png");
     enemyCars[2] = LoadTexture("Graphics/police.png");
+    enemyCars[3] = LoadTexture("Graphics/taxi.png");   // 🟡 new enemy car
 
-    // ---- Separate road and different roadside textures ----
-    Texture2D roadTex = LoadTexture("Graphics/roadtex.jpg");         // middle road
-    Texture2D leftSideTex = LoadTexture("Graphics/left.jpg");       // left side
-    Texture2D rightSideTex = LoadTexture("Graphics/right.jpg");     // right side
+    Texture2D roadTex = LoadTexture("Graphics/roadtex.jpg");
+    Texture2D leftSideTex = LoadTexture("Graphics/left.jpg");
+    Texture2D rightSideTex = LoadTexture("Graphics/right.jpg");
 
-    // ---- Start menu background image ----
-    Texture2D startBg = LoadTexture("Graphics/start.png");       // Add your start menu image here
+    Texture2D startBg = LoadTexture("Graphics/start.png");       
+    Texture2D gameOverBg = LoadTexture("Graphics/gameover.png");
+    Texture2D pauseBg = LoadTexture("Graphics/start.png");
 
-    // Game variables
+    Sound crashSound = LoadSound("Sounds/crash.ogg");
+    Sound menuSelect = LoadSound("Sounds/select.ogg");
+    Music bgMusic = LoadMusicStream("Sounds/bgMusic.ogg");
+    SetSoundVolume(menuSelect, 5.0f);   
+    SetSoundVolume(crashSound, 0.8f);    
+    SetMusicVolume(bgMusic, 0.2f);
+
     float playerX = screenWidth / 2 - carSize / 2;
     float playerY = screenHeight - carSize * 2;
     float playerSpeed = 6.0f;
     int lives = 1;
     int score = 0;
-    int highScore = 0;   
+
+    int highScoreEasy = 0;
+    int highScoreMedium = 0;
+    int highScoreHard = 0;
+
     std::vector<Car> enemies;
     int frameCounter = 0;
     float enemySpeed = 3.0f;
@@ -51,49 +75,52 @@ int main() {
     float roadOffset = 0;
     float roadSpeed = 4;
 
+    PlayMusicStream(bgMusic);
+
     while (!WindowShouldClose()) {
-        // --------- Pause toggle ---------
+        UpdateMusicStream(bgMusic);
+
         if (state == PLAYING && IsKeyPressed(KEY_P)) state = PAUSED;
         else if (state == PAUSED && IsKeyPressed(KEY_P)) state = PLAYING;
 
+        const char* difficultyName;
+        switch (difficulty) {
+            case 0: difficultyName = "EASY"; break;
+            case 1: difficultyName = "MEDIUM"; break;
+            case 2: difficultyName = "HARD"; break;
+            default: difficultyName = "UNKNOWN"; break;
+        }
+
         if (state == START) {
-            if (IsKeyPressed(KEY_ONE)) { difficulty = 0; playerSpeed = 6; enemySpeed = 3; state = PLAYING; }
-            if (IsKeyPressed(KEY_TWO)) { difficulty = 1; playerSpeed = 7; enemySpeed = 5.5f; state = PLAYING; }
-            if (IsKeyPressed(KEY_THREE)) { difficulty = 2; playerSpeed = 8; enemySpeed = 7; state = PLAYING; }
+            if (IsKeyPressed(KEY_ONE)) { difficulty = 0; playerSpeed = 4; enemySpeed = 3; state = PLAYING; PlaySound(menuSelect); }
+            if (IsKeyPressed(KEY_TWO)) { difficulty = 1; playerSpeed = 5; enemySpeed = 5.5f; state = PLAYING; PlaySound(menuSelect); }
+            if (IsKeyPressed(KEY_THREE)) { difficulty = 2; playerSpeed = 6; enemySpeed = 7; state = PLAYING; PlaySound(menuSelect); }
 
             BeginDrawing();
             ClearBackground(DARKGRAY);
-
-            // Draw Start menu background
             DrawTexture(startBg, 0, 0, WHITE);
-
-            DrawText("Subway Survival", screenWidth/2.2 - 100, 100, 30, WHITE);
-            DrawText("Press 1 for EASY",   screenWidth/2 - 100, 250, 20, GREEN);
-            DrawText("Press 2 for MEDIUM", screenWidth/2 - 100, 300, 20, BLUE);
-            DrawText("Press 3 for HARD",   screenWidth/2 - 100, 350, 20, RED);
+            DrawTextWithBorder("Highway Survival", screenWidth/2 - MeasureText("Highway Survival", 30)/2, 100, 30, WHITE, BLACK);
+            DrawTextWithBorder("Press 1 for EASY",   screenWidth/2 - MeasureText("Press 1 for EASY", 20)/2, 250, 20, GREEN, BLACK);
+            DrawTextWithBorder("Press 2 for MEDIUM", screenWidth/2 - MeasureText("Press 2 for MEDIUM", 20)/2, 300, 20, YELLOW, BLACK);
+            DrawTextWithBorder("Press 3 for HARD",   screenWidth/2 - MeasureText("Press 3 for HARD", 20)/2, 350, 20, RED, BLACK);
             EndDrawing();
         }
 
         else if (state == PLAYING && lives > 0) {
             frameCounter++;
-
-            // ---- Road scrolling ----
             roadOffset += roadSpeed;
             if (roadOffset > roadTex.height) roadOffset = 0;
 
-            // ---- Dynamic difficulty ----
             float scaledEnemySpeed = enemySpeed + (score / 50.0f);
             int spawnRate = 60 - (score / 15);
             if (spawnRate < 20) spawnRate = 20;
 
-            // ---- Spawn enemies ----
             if (frameCounter % spawnRate == 0) {
                 float lane = (rand() % 4) * 50 + 120;
-                int type = rand() % 3;
+                int type = rand() % 4;   // 🔹 include new car type
                 enemies.push_back({ lane, 0, type });
             }
 
-            // ---- Move enemies ----
             for (auto &e : enemies) {
                 e.y += scaledEnemySpeed;
                 Texture2D enemyTex = enemyCars[e.type];
@@ -103,68 +130,79 @@ int main() {
                     e.x + enemyTex.width > playerX) {
                     lives--;
                     state = GAMEOVER;
+                    PlaySound(crashSound);
 
-                    // ---- Update High Score ----
-                    if (score > highScore) {
-                        highScore = score;
-                    }
+                    if (difficulty == 0 && score > highScoreEasy) highScoreEasy = score;
+                    if (difficulty == 1 && score > highScoreMedium) highScoreMedium = score;
+                    if (difficulty == 2 && score > highScoreHard) highScoreHard = score;
                 }
             }
 
             enemies.erase(std::remove_if(enemies.begin(), enemies.end(),
                         [&](Car &c){ return c.y > screenHeight; }), enemies.end());
 
-            // ---- Player input ----
             if (IsKeyDown(KEY_LEFT) && playerX > 110) playerX -= playerSpeed;
             if (IsKeyDown(KEY_RIGHT) && playerX < 300 - playerCar.width) playerX += playerSpeed;
 
             if (frameCounter % 5 == 0) score++;
 
-            // ---- Drawing ----
             BeginDrawing();
             ClearBackground(DARKGREEN);
 
-            // ---- Draw left and right roadside textures ----
             for (int y = -leftSideTex.height; y < screenHeight; y += leftSideTex.height) {
                 DrawTexture(leftSideTex, 0, y + (int)roadOffset, WHITE);                     
                 DrawTexture(rightSideTex, screenWidth - rightSideTex.width, y + (int)roadOffset, WHITE); 
             }
 
-            // ---- Draw road texture ----
             for (int y = -roadTex.height; y < screenHeight; y += roadTex.height) {
                 DrawTexture(roadTex, (screenWidth - roadTex.width)/2, y + (int)roadOffset, WHITE);
             }
 
-            // Player
             DrawTexture(playerCar, playerX, playerY, WHITE);
+            for (auto &e : enemies) DrawTexture(enemyCars[e.type], e.x, e.y, WHITE);
 
-            // Enemies
-            for (auto &e : enemies) {
-                DrawTexture(enemyCars[e.type], e.x, e.y, WHITE);
-            }
+            int displayHighScore = 0;
+            if (difficulty == 0) displayHighScore = highScoreEasy;
+            if (difficulty == 1) displayHighScore = highScoreMedium;
+            if (difficulty == 2) displayHighScore = highScoreHard;
 
-            // ---- Show score + high score ----
-            DrawText(TextFormat("Score: %i", score), 10, 10, 20, WHITE);
-            DrawText(TextFormat("Highest Score: %i", highScore), 10, 40, 20, YELLOW);
+            DrawTextWithBorder(TextFormat("Score: %i", score), 10, 10, 20, WHITE, BLACK);
+            DrawTextWithBorder(TextFormat("Highest Score: %i (%s)", displayHighScore, difficultyName), 10, 40, 20, YELLOW, BLACK);
             EndDrawing();
         }
 
         else if (state == PAUSED) {
             BeginDrawing();
-            ClearBackground(BLACK);
-            DrawText("GAME PAUSED", screenWidth/2 - 120, screenHeight/2 - 40, 30, YELLOW);
-            DrawText("Press P to Resume", screenWidth/2 - 110, screenHeight/2 + 10, 20, WHITE);
-            DrawText("Press ESC to Quit", screenWidth/2 - 110, screenHeight/2 + 40, 20, WHITE);
+            DrawTexture(pauseBg, 0, 0, WHITE);
+            const char* pauseText = "GAME PAUSED";
+            int fontSizePause = 30;
+            int centerXP = screenWidth/2 - MeasureText(pauseText, fontSizePause)/2;
+            DrawTextWithBorder(pauseText, centerXP, screenHeight/3 - fontSizePause/2, fontSizePause, GREEN, BLACK);
+            const char* resumeText = "Press P to Resume";
+            int fontSizeResume = 20;
+            DrawTextWithBorder(resumeText, screenWidth/2 - MeasureText(resumeText, fontSizeResume)/2, screenHeight/2 + 10, fontSizeResume, YELLOW, BLACK);
+            const char* quitText = "Press ESC to Quit";
+            DrawTextWithBorder(quitText, screenWidth/2 - MeasureText(quitText, fontSizeResume)/2, screenHeight/2 + 40, fontSizeResume, WHITE, BLACK);
             EndDrawing();
         }
 
         else if (state == GAMEOVER) {
             BeginDrawing();
-            ClearBackground(DARKGRAY);
-            DrawText("GAME OVER!", screenWidth/2 - 100, screenHeight/2, 30, RED);
-            DrawText(TextFormat("Final Score: %i", score), screenWidth/2 - 100, screenHeight/2 + 40, 20, WHITE);
-            DrawText(TextFormat("Highest Score: %i", highScore), screenWidth/2 - 100, screenHeight/2 + 70, 20, YELLOW);
-            DrawText("Press ENTER to Restart", screenWidth/2 - 120, screenHeight/2 + 100, 20, YELLOW);
+            DrawTexture(gameOverBg, 0, 0, WHITE);
+            int fontSizeFinal = 20;
+            const char* highScoreText = TextFormat("Highest Score: %i (%s)",
+                                                   (difficulty==0 ? highScoreEasy : (difficulty==1 ? highScoreMedium : highScoreHard)),
+                                                   difficultyName);
+            DrawTextWithBorder(TextFormat("Final Score: %i", score),
+                               screenWidth/2 - MeasureText(TextFormat("Final Score: %i", score), fontSizeFinal)/2,
+                               screenHeight/2 + 40, fontSizeFinal, WHITE, BLACK);
+            DrawTextWithBorder(highScoreText,
+                               screenWidth/2 - MeasureText(highScoreText, fontSizeFinal)/2,
+                               screenHeight/2 + 70, fontSizeFinal, YELLOW, BLACK);
+            const char* restartText = "Press ENTER to Restart";
+            DrawTextWithBorder(restartText,
+                               screenWidth/2 - MeasureText(restartText, fontSizeFinal)/2,
+                               screenHeight/2 + 100, fontSizeFinal, GREEN, BLACK);
             EndDrawing();
 
             if (IsKeyPressed(KEY_ENTER)) {
@@ -175,18 +213,24 @@ int main() {
                 playerX = screenWidth / 2 - carSize / 2;
                 roadOffset = 0;
                 state = START;
+                PlaySound(menuSelect);
             }
         }
     }
 
-    // Unload textures
+    UnloadSound(crashSound);
+    UnloadSound(menuSelect);
+    UnloadMusicStream(bgMusic);
+    CloseAudioDevice();
+
     UnloadTexture(playerCar);
-    for (int i = 0; i < 3; i++) UnloadTexture(enemyCars[i]);
+    for (int i = 0; i < 4; i++) UnloadTexture(enemyCars[i]);  // 🔹 unload new texture too
     UnloadTexture(roadTex);
     UnloadTexture(leftSideTex);
     UnloadTexture(rightSideTex);
     UnloadTexture(startBg);
-
+    UnloadTexture(gameOverBg);
+    UnloadTexture(pauseBg);
     CloseWindow();
     return 0;
 }

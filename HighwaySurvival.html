@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<title>Emscripten Game Centered Fullscreen</title>
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+canvas.emscripten {
+    border: 0;
+    background-color: #000;
+    display: block;
+    transform: translate(-50%, -50%);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+}
+
+/* Spinner and status hidden */
+#spinner, #status {
+    display: none !important;
+}
+
+#controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+</style>
+</head>
+<body>
+
+<div id="controls">
+    <input type="button" id="fsButton" value="Fullscreen">
+</div>
+
+<canvas id="canvas" class="emscripten" tabindex="-1"></canvas>
+
+<script>
+var canvas = document.getElementById("canvas");
+
+// Emscripten Module
+var Module = {
+    canvas: canvas,
+    print: (...args) => console.log(...args),
+    setStatus: (msg) => {} // Disabled status updates
+};
+
+// Fullscreen function that also centers canvas
+function goFullscreen() {
+    if (canvas.requestFullscreen) {
+        canvas.requestFullscreen();
+    } else if (canvas.webkitRequestFullscreen) {
+        canvas.webkitRequestFullscreen();
+    } else if (canvas.mozRequestFullScreen) {
+        canvas.mozRequestFullScreen();
+    } else if (canvas.msRequestFullscreen) {
+        canvas.msRequestFullscreen();
+    }
+
+    // Resize & center canvas after fullscreen
+    setTimeout(() => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.style.width = canvas.width + "px";
+        canvas.style.height = canvas.height + "px";
+
+        // Optional: scale to fit screen while keeping aspect ratio
+        const scaleX = w / canvas.width;
+        const scaleY = h / canvas.height;
+        const scale = Math.min(scaleX, scaleY);
+        canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }, 100);
+}
+
+// Attach fullscreen button
+document.getElementById("fsButton").onclick = goFullscreen;
+
+// Recenter on resize (fullscreen exit/enter)
+window.addEventListener("resize", () => {
+    const scaleX = window.innerWidth / canvas.width;
+    const scaleY = window.innerHeight / canvas.height;
+    const scale = Math.min(scaleX, scaleY);
+    canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+});
+</script>
+
+<script async src="HighwaySurvival.js"></script>
+</body>
+</html>
